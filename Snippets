@@ -1,1 +1,62 @@
+import UIKit
+import AuthenticationServices
+import CloudKit
+
+class User {
+    var id: UUID
+    var name: String
+    var role: String
+    var tasks: [Task]
+
+    init(name: String, role: String, tasks: [Task]) {
+        self.id = UUID() // Generate a new UUID as the primary key
+        self.name = name
+        self.role = role
+        self.tasks = tasks
+    }
+
+    // Add CloudKit interactions here
+}
+
+// Task class
+class Task {
+    var title: String
+    var description: String
+    var status: String
+
+    init(title: String, description: String, status: String) {
+        self.title = title
+        self.description = description
+        self.status = status
+    }
+
+    // Add CloudKit interactions here
+}
+
+// Project class
+class Project {
+    var name: String
+    var tasks: [Task]
+
+    init(name: String, tasks: [Task]) {
+        self.name = name
+        self.tasks = tasks
+    }
+
+    // Add CloudKit interactions here
+}
+
+class ViewController: UIViewController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Add "Sign in with Apple" button and configure it
+    }
+
+    // Handle user authentication and create a User instance
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            let userID = appleIDCredential.user
+            let name = "\(appleIDCredential.fullName?.givenName ?? "") \(appleIDCredential.fullName?.familyName ?? "")"
+            let user = User(name: name, role: "
 
