@@ -1,18 +1,20 @@
-import UIKit
-import AuthenticationServices
+import Foundation
 import CloudKit
 
+// User class
 class User {
     var id: UUID
     var name: String
     var role: String
     var tasks: [Task]
+    var schedule: Schedule
 
-    init(name: String, role: String, tasks: [Task]) {
+    init(name: String, role: String, tasks: [Task], schedule: Schedule) {
         self.id = UUID() // Generate a new UUID as the primary key
         self.name = name
         self.role = role
         self.tasks = tasks
+        self.schedule = schedule
     }
 
     // Add CloudKit interactions here
@@ -46,17 +48,156 @@ class Project {
     // Add CloudKit interactions here
 }
 
-class ViewController: UIViewController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+// Schedule class
+class Schedule {
+    var workHours: [String: (start: Date, end: Date)]
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Add "Sign in with Apple" button and configure it
+    init() {
+        self.workHours = [:]
     }
 
-    // Handle user authentication and create a User instance
-    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-            let userID = appleIDCredential.user
-            let name = "\(appleIDCredential.fullName?.givenName ?? "") \(appleIDCredential.fullName?.familyName ?? "")"
-            let user = User(name: name, role: "
+    func setWorkHours(for day: String, start: Date, end: Date) {
+        workHours[day] = (start, end)
+    }
 
+    func getWorkHours(for day: String) -> (Date, Date)? {
+        return workHours[day]
+    }
+}
+
+enum ScheduleRequestStatus: String {
+    case pending = "Pending"
+    case approved = "Approved"
+    case rejected = "Rejected"
+}
+
+class ScheduleRequest {
+    var id: UUID
+    var employeeId: UUID
+    var day: String
+    var newStart: Date
+    var newEnd: Date
+    var status: ScheduleRequestStatus
+
+    init(employeeId: UUID, day: String, newStart: Date, newEnd: Date) {
+        self.id = UUID()
+        self.employeeId = employeeId
+        self.day = day
+        self.newStart = newStart
+        self.newEnd = newEnd
+        self.status = .pending
+    }
+
+    // Add CloudKit interactions here
+}
+
+extension ScheduleRequest {
+    func toCKRecord() -> CKRecord {
+        let recordID = CKRecord.ID(recordName: id.uuidString)
+        let record = CKRecord(recordType: "ScheduleRequest", recordID: recordID)
+
+        record["employeeId"] = employeeId.uuidString as CKRecordValue
+        record["day"] = day as CKRecordValue
+        record["newStart"] = newStart as CKRecordValue
+        record["newEnd"] = newEnd as CKRecordValue
+        record["status"] = status.rawValue as CKRecordValue
+
+        return record
+    }
+
+    static func fromCKRecord(record: CKRecord) -> ScheduleRequest? {
+        guard let employeeIdString = record["employeeId"] as? String,
+              let employeeId = UUID(uuidString: employeeIdString),
+              let day = record["day"] as? String,
+              let newStart = record["newStart"] as? Date,
+              let newEnd = record["newEnd"] as? Date,
+              let statusString = record["status"] as? String,
+              let status = ScheduleRequestStatus(rawValue: statusString)
+        else {
+            return
+
+import UIKit
+import CoreLocation
+import MapKit
+
+class YourViewController: UIViewController, CLLocationManagerDelegate {
+    
+    private var locationManager: CLLocationManager?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Create the button programmatically if not using a storyboard
+        let reportLateButton = UIButton(type: .system)
+        reportLateButton.setTitle("Report Late", for: .normal)
+        reportLateButton.addTarget(self, action: #selector(reportLateButtonTapped), for: .touchUpInside)
+        reportLateButton.frame = CGRect(x: 100, y: 100, width: 200, height: 40)
+        view.addSubview(reportLateButton)
+    }
+    
+    @objc func reportLateButtonTapped() {
+        requestLocationPermission()
+    }
+    
+    private func requestLocationPermission() {
+        locationManager = CLLocationManager()
+        locationManager?.delegate = self
+        locationManager?.requestWhenInUseAuthorization()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        if status == .authorizedWhenInUse {
+            locationManager?.requestLocation()
+        } else if status != .notDetermined {
+            showAlert(message: "Location permission is required to report late.")
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let currentLocation = locations.first else { return }
+        
+        let farmAddress = "137 Fairweather Lane, Lancaster, VA 22503"
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(farmAddress) { placemarks, error in
+            if let error = error {
+                print("Error geocoding address: \(error.localizedDescription)")
+                return
+            }
+            
+            if let destinationLocation = placemarks?.first?.location {
+                self.calculateRoute(currentLocation: currentLocation, destinationLocation: destinationLocation.coordinate)
+            } else {
+                print("Unable to find the destination location.")
+            }
+        }
+    }
+    
+    private func calculateRoute(currentLocation: CLLocation, destinationLocation: CLLocationCoordinate2D) {
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: currentLocation.coordinate))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destinationLocation))
+        request.transportType = .automobile
+
+        let directions = MKDirections(request: request)
+        directions.calculate { response, error in
+            if let error = error {
+                print("Error calculating route: \(error.localizedDescription)")
+                return
+            }
+
+            if let route = response?.routes.first {
+                let travelTime = route.expectedTravelTime
+                let timeInMinutes = Int(travelTime / 60)
+                self.reportLateMessage(timeInMinutes: timeInMinutes, currentLocation: currentLocation)
+            }
+        }
+    }
+    
+    private func reportLateMessage(timeInMinutes: Int, currentLocation: CLLocation) {
+        // Share the information with the concerned person or store it in CloudKit
+        print("Employee is running late by \(timeInMinutes) minutes. Current location: \(currentLocation.coordinate.latitude), \(currentLocation.coordinate.longitude)")
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Error fetching location: \(error.localizedDescription)")
+   
