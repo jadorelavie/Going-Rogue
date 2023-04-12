@@ -4,8 +4,9 @@ import UIKit
 import CoreLocation
 import MapKit
 
+//***TASKS to COMPLETE:***
+//Please add status to the user class. Let's remove Task from the Impact enum and use it for both the project and task classes. Let's also make Impact multi-select in both project and task classes.
 
-// User class
 import Foundation
 
 class User {
@@ -16,7 +17,7 @@ class User {
     var schedule: Schedule
 
     init(name: String, role: String, jobTitle: String, schedule: Schedule) {
-        self.id = UUID() // Generate a new UUID as the primary key
+        self.id = UUID()
         self.name = name
         self.role = role
         self.jobTitle = jobTitle
@@ -51,7 +52,7 @@ class Task {
     var tags: [String]
 
     init(title: String, description: String, status: String, accountableUserId: UUID, responsibleUserIds: [UUID], projectIds: [UUID], dueDate: Date, reviewDate: Date, impact: TaskImpact, urgency: TaskUrgency, tags: [String]) {
-        self.id = UUID() // Generate a new UUID as the primary key
+        self.id = UUID()
         self.title = title
         self.description = description
         self.status = status
@@ -69,22 +70,23 @@ class Task {
 class Project {
     var id: UUID
     var name: String
-		var dueDate: Date
+    var status: String
+    var dueDate: Date
     var reviewDate: Date
     var impact: TaskImpact
-		
 
-    init(name: String) {
-        self.id = UUID() // Generate a new UUID as the primary key
+    init(name: String, status: String, dueDate: Date, reviewDate: Date, impact: TaskImpact) {
+        self.id = UUID()
         self.name = name
-				self.dueDate = dueDate
+        self.status = status
+        self.dueDate = dueDate
         self.reviewDate = reviewDate
         self.impact = impact
     }
 }
 
 
-    // Add CloudKit interactions here
+    // ****Add CloudKit interactions here
 }
 
 // Schedule class
