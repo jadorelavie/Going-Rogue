@@ -6,48 +6,83 @@ import MapKit
 
 
 // User class
+import Foundation
+
 class User {
     var id: UUID
     var name: String
     var role: String
-    var tasks: [Task]
+    var jobTitle: String
     var schedule: Schedule
 
-    init(name: String, role: String, tasks: [Task], schedule: Schedule) {
+    init(name: String, role: String, jobTitle: String, schedule: Schedule) {
         self.id = UUID() // Generate a new UUID as the primary key
         self.name = name
         self.role = role
-        self.tasks = tasks
+        self.jobTitle = jobTitle
         self.schedule = schedule
     }
-
-    // Add CloudKit interactions here
 }
 
-// Task class
+enum TaskImpact: Int {
+    case low = 1
+    case medium = 2
+    case high = 3
+}
+
+enum TaskUrgency: Int {
+    case notUrgent = 1
+    case timeSensitive = 2
+    case missionCritical = 3
+}
+
 class Task {
+    var id: UUID
     var title: String
     var description: String
     var status: String
+    var accountableUserId: UUID
+    var responsibleUserIds: [UUID]
+    var projectIds: [UUID]
+    var dueDate: Date
+    var reviewDate: Date
+    var impact: TaskImpact
+    var urgency: TaskUrgency
+    var tags: [String]
 
-    init(title: String, description: String, status: String) {
+    init(title: String, description: String, status: String, accountableUserId: UUID, responsibleUserIds: [UUID], projectIds: [UUID], dueDate: Date, reviewDate: Date, impact: TaskImpact, urgency: TaskUrgency, tags: [String]) {
+        self.id = UUID() // Generate a new UUID as the primary key
         self.title = title
         self.description = description
         self.status = status
+        self.accountableUserId = accountableUserId
+        self.responsibleUserIds = responsibleUserIds
+        self.projectIds = projectIds
+        self.dueDate = dueDate
+        self.reviewDate = reviewDate
+        self.impact = impact
+        self.urgency = urgency
+        self.tags = tags
     }
-
-    // Add CloudKit interactions here
 }
 
-// Project class
 class Project {
+    var id: UUID
     var name: String
-    var tasks: [Task]
+		var dueDate: Date
+    var reviewDate: Date
+    var impact: TaskImpact
+		
 
-    init(name: String, tasks: [Task]) {
+    init(name: String) {
+        self.id = UUID() // Generate a new UUID as the primary key
         self.name = name
-        self.tasks = tasks
+				self.dueDate = dueDate
+        self.reviewDate = reviewDate
+        self.impact = impact
     }
+}
+
 
     // Add CloudKit interactions here
 }
