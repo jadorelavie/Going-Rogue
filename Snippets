@@ -1,3 +1,51 @@
+//**Prompts I'm using to get BingChat Ai to write code for app**
+Okay. Here is a possible rewrite of the prompt to include authentication, offline functionality, synchronization and conflict resolution:
+
+Write the code in swift to start an iOS app that allows for creating and tracking tasks on an oyster farm. The app should require users to sign in with apple to access their data and share it with other users. The app should also allow users to manage employees on the farm and assign them to tasks. The tasks should be either oyster tasks ("husbandry" tasks) or project tasks. The oyster tasks should be assigned to batches of oysters that are stored in containers and tracked by their size and purchase date. The project tasks should be assigned to projects that are related to the farm's infrastructure or maintenance. The app should also track the removals and returns of oysters for sale or mortality. The app should use as little typing in text as possible in favor of picklists and automated data entry. The app should also work offline and synchronize the data with iCloud when online, resolving any conflicts that might occur. The goal is to use the task data to track and predict the growth of the oysters under different conditions and seasons.
+
+Here is a possible rewrite of the task list and the ranking of the tasks in order of priority:
+
+- Write the record types and fields for OysterTask, Oyster, ProjectTask, Project, Employee, and Assignment classes in the CloudKit dashboard (1)
+- Write the AppDelegate class to manage the app's life cycle and access the iCloud container (2)
+- Write the SignInViewController class to display and handle the sign in with apple process using the AuthenticationServices framework (3)
+- Write the MainViewController class to display and interact with the user interface using the UIKit framework (4)
+- Write the TaskCell class to customize the appearance and behavior of the table view cells for displaying oyster tasks (5)
+- Write the ProjectCell class to customize the appearance and behavior of the table view cells for displaying project tasks (6)
+- Write the EmployeeCell class to customize the appearance and behavior of the table view cells for displaying employees (7)
+- Write the methods for querying, creating, modifying, and deleting records using the CloudKit framework (8)
+- Write the methods for implementing the table view and picker view protocols for data source and delegate (9)
+- Write the methods for using CloudKit's user interface components for sharing data with other users or devices (10)
+- Write the methods for adding, editing, deleting, and splitting tasks and batches using alert controllers, text fields, and picker views (11)
+- Write the methods for adding, editing, deleting, and splitting projects and project tasks using alert controllers, text fields, and picker views (12)
+- Write the methods for adding, editing, deleting, and assigning employees using alert controllers, text fields, and picker views (13)
+- Write the methods for caching, synchronizing, and resolving conflicts of data using NSUbiquitousKeyValueStore or NSPersistentCloudKitContainer (14)
+- Write the methods for analyzing and predicting the growth of the oysters using statistical or machine learning techniques (15)
+- Write the methods for displaying charts or graphs for visualizing the growth data using a third-party library such as Charts (16)
+
+This ranking is based on my own estimation of how important or complex each task is for launching an MVP. However, you might have different criteria or preferences for your app development.
+
+//**latest re-write of requirements to be merged into list above**
+You're welcome.
+
+I think I would rewrite the original prompt and task list as follows:
+
+Write the code in Swift to start an iOS app that allows for creating and tracking tasks on an oyster farm. The app should have the following features:
+
+- Users can sign in with Apple to access their data and share it with other users.
+- Users can manage employees on the farm and assign them to tasks.
+- Users can create two types of tasks: oyster tasks and project tasks.
+- Oyster tasks are related to the care and growth of oysters, such as tumbling, grading, or harvesting. They are assigned to batches of oysters that are stored in containers and tracked by their seed round, purchase date, quantity, type, family, size, location, mortality, and rehoming.
+- Project tasks are related to the farm's infrastructure or maintenance, such as building, repairing, or cleaning. They can be tied to projects that have a name, type, status, start date, end date, and a list of tasks. They can also be ad hoc tasks for the day that are not tied to any project.
+- Users can use picklists and voice input to enter data with minimal typing.
+- Users can view and edit their data offline and sync it with iCloud when online, resolving any conflicts that might occur.
+- Users can use machine learning models to track and predict the growth of oysters under different conditions and seasons.
+
+Please write the record types and fields for Seed, OysterSize, Oyster, ProjectTask, Project, Employee, and Assignment classes in the CloudKit dashboard.
+
+Is this clearer?
+
+
+-------
 import Foundation
 import CloudKit
 import UIKit
@@ -239,3 +287,386 @@ class YourViewController: UIViewController, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Error fetching location: \(error.localizedDescription)")
    
+
+
+
+
+---------
+// **Oyster and OysterSize Classes**
+
+import Foundation
+import CloudKit
+
+// A property wrapper that clamps a value within a range
+@propertyWrapper
+struct Clamp<Value: Comparable> {
+  var value: Value
+  let range: ClosedRange<Value>
+  
+  init(wrappedValue: Value, _ range: ClosedRange<Value>) {
+    self.value = wrappedValue
+    self.range = range
+    assert(range.contains(wrappedValue))
+  }
+  
+  var wrappedValue: Value {
+    get { value }
+    set { value = min(max(range.lowerBound, newValue), range.upperBound) }
+  }
+}
+
+// A property wrapper that ensures a value is not empty
+@propertyWrapper
+struct NonEmpty<Value: Collection> {
+  var value: Value
+  
+  init(wrappedValue: Value) {
+    self.value = wrappedValue
+    assert(!wrappedValue.isEmpty)
+  }
+  
+  var wrappedValue: Value {
+    get { value }
+    set { value = newValue.isEmpty ? value : newValue }
+  }
+}
+
+// A class that represents an oyster batch
+class Oyster: Codable {
+  // The unique identifier of the oyster batch
+  @NonEmpty var oysterID: UUID 
+  // A reference to a Seed record that represents the seed batch for this oyster batch
+  var seedBatch: CKRecord.Reference 
+  // The identifier of the container where this batch is stored
+  @NonEmpty var containerID: String 
+  // The name or coordinate of the location where this batch is placed on the farm
+  var location: String or CLLocation 
+  // A list of references to different oyster size records that represent the oysters in this batch
+  @NonEmpty var oysterSizes: [CKRecord.Reference] 
+  // The date when this batch was created or split from a previous batch
+  var date: Date 
+  // The date when this record was created in CloudKit 
+  var dateCreated: Date 
+  
+  // A convenience initializer that takes a CKRecord object and converts it to an Oyster object 
+  init?(record: CKRecord) {
+    guard let data = try? JSONEncoder().encode(record) else { return nil }
+    guard let oyster = try? JSONDecoder().decode(Oyster.self, from: data) else { return nil }
+    self = oyster 
+  }
+  
+  // A convenience method that converts an Oyster object to a CKRecord object 
+  func toRecord() -> CKRecord? {
+    guard let data = try? JSONEncoder().encode(self) else { return nil }
+    guard let record = try? JSONDecoder().decode(CKRecord.self, from: data) else { return nil }
+    return record 
+  }
+  
+  // A computed property that returns the name of the seed round based on the purchase date 
+  var seedRoundName: String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM"
+    return formatter.string(from: seedBatch.purchaseDate)
+  }
+  
+  // A method that calculates the total quantity of oysters in this batch 
+  func totalQuantity() -> Int {
+    var total = 0 
+    for oysterSizeRef in oysterSizes {
+      if let oysterSize = fetchOysterSize(with: oysterSizeRef) {
+        total += oysterSize.quantity 
+      }
+    }
+    return total 
+  }
+  
+}
+
+// A class that represents an oyster size group 
+class OysterSize: Codable {
+  // The unique identifier of the oyster size group 
+  @NonEmpty var oysterSizeID: UUID
+Okay, I can finish the code for the OysterSize class in Swift. Here is the rest of the code:
+
+```swift
+  // The number of oysters in this group 
+  @Clamp(0...Int.max) var quantity: Int 
+  // The average size of the oysters in this group 
+  @Clamp(0...Double.infinity) var size: Double 
+  // The number of oysters removed from this group for mortality reasons 
+  @Clamp(0...Int.max) var mortality: Int 
+  // The number of oysters removed from this group for harvest reasons 
+  @Clamp(0...Int.max) var harvest: Int 
+  // A reference to an Oyster record that represents the previous batch of this group, if any 
+  var priorOyster: CKRecord.Reference? 
+  // The date when this record was created in CloudKit 
+  var dateCreated: Date
+  
+  
+  // A convenience initializer that takes a CKRecord object and converts it to an OysterSize object 
+  init?(record: CKRecord) {
+    guard let data = try? JSONEncoder().encode(record) else { return nil }
+    guard let oysterSize = try? JSONDecoder().decode(OysterSize.self, from: data) else { return nil }
+    self = oysterSize 
+  }
+  
+  // A convenience method that converts an OysterSize object to a CKRecord object 
+  func toRecord() -> CKRecord? {
+    guard let data = try? JSONEncoder().encode(self) else { return nil }
+    guard let record = try? JSONDecoder().decode(CKRecord.self, from: data) else { return nil }
+    return record 
+  }
+}
+
+------
+// mystery code for tasks and projects
+
+// An enum that defines the possible types of tasks
+enum TaskType: String {
+  case tumbling, grading, harvesting, drying, cleaning, splitting, returning
+}
+
+// An enum that defines the possible statuses of tasks
+enum TaskStatus: String {
+  case Backlog, Planned, InProgress, Completed
+}
+
+// An enum that defines the possible types of projects
+enum ProjectType: String {
+  case Infrastructure, Maintenance, ProcessImprovement, Overhead, Sales, CustomerExperience
+}
+
+// An enum that defines the possible statuses of projects
+enum ProjectStatus: String {
+  case Backlog, Planned, InProgress, Completed
+}
+
+
+---
+//**OysterTask Class**
+Okay, I can write the OysterTask and Employee classes in Swift. Here is the code:
+
+```swift
+import Foundation
+import CloudKit
+
+// An enum that defines the possible statuses of oyster tasks
+enum OysterTaskStatus: String {
+  case backlog, planned, inProgress, completed
+}
+
+// An enum that defines the possible recurrence options of oyster tasks
+enum OysterTaskRecurrence: String {
+  case none, monthly, custom
+}
+
+// A class that represents an oyster task
+class OysterTask: Codable {
+  // The unique identifier of the task
+  @NonEmpty var taskID: UUID
+  // The name or description of the task
+  @NonEmpty var taskName: String
+  // The type of the task, such as feeding, grading, harvesting, etc.
+  var taskType: TaskType
+  // The status of the task, such as backlog, planned, in progress, completed, etc.
+  var taskStatus: OysterTaskStatus
+  // The date when the task was created or assigned
+  var taskDate: Date
+  // The date when the task is due
+  var taskDueDate: Date
+  // The date when the task is expected to start
+  var taskStartDate: Date?
+  // The date when the task is expected to be reviewed
+  var taskReviewDate: Date?
+  // The recurrence option of the task, such as none, monthly, custom, etc.
+  var taskRecurrence: OysterTaskRecurrence
+  // The custom recurrence interval of the task in days, if any
+  @Clamp(1...Int.max) var taskRecurrenceInterval: Int?
+  // A reference to an Oyster record that represents the batch of oysters for this task
+  var oysterBatch: CKRecord.Reference
+  // A reference to an Employee record that represents the employee who is assigned to this task
+  var assignedTo: CKRecord.Reference?
+  // The time when the task was started by the employee
+  var startTime: Date?
+  // The time when the task was stopped by the employee
+  var stopTime: Date?
+  // The duration of the task in minutes
+  @Clamp(0...Int.max) var duration: Int?
+  // The date when this record was created in CloudKit 
+  var dateCreated: Date
+  
+  
+  // A convenience initializer that takes a CKRecord object and converts it to an OysterTask object 
+  init?(record: CKRecord) {
+    guard let data = try? JSONEncoder().encode(record) else { return nil }
+    guard let oysterTask = try? JSONDecoder().decode(OysterTask.self, from: data) else { return nil }
+    self = oysterTask 
+  }
+
+
+//**
+Sure! Here is an updated version of the `Project`, `ProjectTask`, and `Employee` classes that includes comments to explain the code:
+
+```swift
+import Foundation
+import CloudKit
+
+// The Project class represents a project on the oyster farm.
+class Project: Codable {
+    // The unique identifier for the project.
+    var id: CKRecord.ID
+    // The name of the project.
+    var name: String
+    // The type of the project.
+    var type: String
+    // The current status of the project.
+    var status: String
+    // The date when the project is scheduled to start.
+    var startDate: Date
+    // The date when the project is scheduled to end.
+    var endDate: Date
+    // An array of tasks associated with the project.
+    var tasks: [ProjectTask]
+
+    // Initializes a new Project object with the specified properties.
+    init(name: String, type: String, status: String, startDate: Date, endDate: Date) {
+        self.id = CKRecord.ID(recordName: UUID().uuidString)
+        self.name = name
+        self.type = type
+        self.status = status
+        self.startDate = startDate
+        self.endDate = endDate
+        self.tasks = []
+    }
+
+    // Converts the Project object to a CKRecord object for use with CloudKit.
+    func toCKRecord() -> CKRecord {
+        let record = CKRecord(recordType: "Project", recordID: id)
+        record["name"] = name as CKRecordValue
+        record["type"] = type as CKRecordValue
+        record["status"] = status as CKRecordValue
+        record["startDate"] = startDate as CKRecordValue
+        record["endDate"] = endDate as CKRecordValue
+        return record
+    }
+}
+
+// The ProjectTask class represents a task associated with a project on the oyster farm.
+class ProjectTask: Codable {
+    // The unique identifier for the task.
+    var id: CKRecord.ID
+    // The name of the task.
+    var name: String
+    // The type of the task.
+    var type: String
+    // The current status of the task.
+    var status: String
+    // The date when the task is scheduled to start (optional).
+    var startDate: Date?
+    // The date when the task is scheduled to end (optional).
+    var endDate: Date?
+    // The date when the task is scheduled to be reviewed (optional).
+    var reviewDate: Date?
+    // An array of employees assigned to the task (represented by their unique identifiers).
+    var employees: [CKRecord.Reference]
+    // A weak reference to the project associated with the task (optional).
+    weak var project: Project?
+
+    // Initializes a new ProjectTask object with the specified properties.
+    init(name: String, type: String, status: String) {
+        self.id = CKRecord.ID(recordName: UUID().uuidString)
+        self.name = name
+        self.type = type
+        self.status = status
+        self.employees = []
+    }
+
+    // Converts the ProjectTask object to a CKRecord object for use with CloudKit.
+    func toCKRecord() -> CKRecord {
+        let record = CKRecord(recordType: "ProjectTask", recordID: id)
+        record["name"] = name as CKRecordValue
+        record["type"] = type as CKRecordValue
+        record["status"] = status as CKRecordValue
+        record["startDate"] = startDate as? CKRecordValue
+        record["endDate"] = endDate as? CKRecordValue
+        record["reviewDate"] = reviewDate as? CKRecordValue
+        record["employees"] = employees as? CKRecordValue
+        return record
+    }
+}
+
+
+
+// The Employee class represents an employee on the oyster farm.
+class Employee: Codable {
+    // The unique identifier for the employee.
+    var id: CKRecord.ID
+    // The name of the employee.
+    var name: String
+    // The date when the employee started working on the farm (optional).
+    var startDate: Date?
+    // The date when the employee left the farm (if applicable) (optional).
+    var separationDate: Date?
+    // The current employment status of the employee.
+    var status: String
+
+    // Initializes a new Employee object with the specified properties.
+    init(name: String) {
+        self.id = CKRecord.ID(recordName: UUID().uuidString)
+        self.name = name
+    }
+
+    // Converts the Employee object to a CKRecord object for use with CloudKit.
+    func toCKRecord() -> CKRecord {
+        let record = CKRecord(recordType: "Employee", recordID: id)
+        record["name"] = name as CKRecordValue
+        record["startDate"] = startDate as? CKRecordValue
+        record["separationDate"] = separationDate as? CKRecordValue
+        record["status"] = status as CKRecordValue
+        return record
+    }
+}
+
+// The ProjectTask class represents a task associated with a project on the oyster farm.
+class ProjectTask: Codable {
+    // The unique identifier for the task.
+    var id: CKRecord.ID
+    // The name of the task.
+    var name: String
+    // The type of the task.
+    var type: String
+    // The current status of the task.
+    var status: String
+    // The date when the task is scheduled to start (optional).
+    var startDate: Date?
+    // The date when the task is scheduled to end (optional).
+    var endDate: Date?
+    // The date when the task is scheduled to be reviewed (optional).
+    var reviewDate: Date?
+    // An array of employees assigned to the task (represented by their unique identifiers).
+    var employees: [CKRecord.Reference]
+    // A weak reference to the project associated with the task (optional).
+    weak var project: Project?
+
+    // Initializes a new ProjectTask object with the specified properties.
+    init(name: String, type: String, status: String) {
+        self.id = CKRecord.ID(recordName: UUID().uuidString)
+        self.name = name
+        self.type = type
+        self.status = status
+        self.employees = []
+    }
+
+    // Converts the ProjectTask object to a CKRecord object for use with CloudKit.
+    func toCKRecord() -> CKRecord {
+        let record = CKRecord(recordType: "ProjectTask", recordID: id)
+        record["name"] = name as CKRecordValue
+        record["type"] = type as CKRecordValue
+        record["status"] = status as CKRecordValue
+        record["startDate"] = startDate as? CKRecordValue
+        record["endDate"] = endDate as? CKRecordValue
+        record["reviewDate"] = reviewDate as? CKRecordValue
+        record["employees"] = employees as? CKRecordValue
+        return record
+	}
+}
