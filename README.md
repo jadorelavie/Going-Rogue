@@ -1,4 +1,2 @@
-smartthings-nest-device
+Rogue Oysters Employee App
 =======================
-
-Tweaking Dianoga's Nest Device Type for SmartThings
